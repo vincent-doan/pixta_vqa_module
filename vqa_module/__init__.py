@@ -1,0 +1,1 @@
+IMG_PATH = '/home/phongtnh/MyProjects/image_search/ov_detection/imgs'
