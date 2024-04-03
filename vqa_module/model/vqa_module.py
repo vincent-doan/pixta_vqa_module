@@ -75,6 +75,7 @@ class VQAModel(ABC):
 
         # Format output
         output = {}
+        output['accepted_images'] = [idx_to_name[idx] for idx in accepted_indices] if idx_to_name else accepted_indices
         for idx in range(num_images):
             key = idx_to_name[idx] if idx_to_name else idx
             output[key] = {
@@ -85,7 +86,6 @@ class VQAModel(ABC):
                 output[key]['accepted'] = True
             else:
                 output[key]['accepted'] = False
-
         return output
 
 class BLIPCapliftLarge(VQAModel):
