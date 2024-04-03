@@ -2,3 +2,5 @@
 app.log
 samples/
 **/__pycache__/
+imgs/
+outputs/
