@@ -18,7 +18,6 @@ class Request(BaseModel):
     images: List[UploadFile] = Form(..., title="Images", description="List of images to process.")
     questions: List[str] = Form(..., title="Questions", description="List of questions to ask.")
     expected_answers: List[str] = Form(..., title="Expected Answers", description="List of expected answers for each question. Possible answers should be separated by a space.")
-    batch_size: int = Form(2, title="Batch Size", description="Number of images to process at once.")
     question_weights: str = Form(None, title="Question Weights", description="List of weights for each question. Weights should be separated by a space.")
     threshold: float = Form(None, title="Threshold", description="Threshold for accepting images.")
 
@@ -30,17 +29,10 @@ def docs_redirect():
 async def process_images(request: Request = Depends()) -> Dict:
     try:
         start = time.time()
-        # Log request data
-        logger.info(f"Questions: {request.questions} Type: {type(request.questions)}")
-        logger.info(f"Expected Answers: {request.expected_answers} Type: {type(request.expected_answers)}")
-        logger.info(f"Batch Size: {request.batch_size} Type: {type(request.batch_size)}")
-        logger.info(f"Question Weights: {request.question_weights} Type: {type(request.question_weights)}")
-        logger.info(f"Threshold: {request.threshold} Type: {type(request.threshold)}")
         
         # Process request data
         questions = process_concatenated_questions(request.questions) if request.questions[0].count('?') > 1 else request.questions
         expected_answers = process_concatenated_expected_answers(request.expected_answers) if ',' in request.expected_answers[0] else [x.split() for x in request.expected_answers]
-        batch_size = request.batch_size
         question_weights = [float(x) for x in request.question_weights.split()]
         threshold = request.threshold
 
@@ -60,7 +52,6 @@ async def process_images(request: Request = Depends()) -> Dict:
             questions=questions,
             images=processed_images,
             expected_answers=expected_answers,
-            batch_size=batch_size,
             question_weights=question_weights,
             threshold=threshold,
             idx_to_name=idx_to_name

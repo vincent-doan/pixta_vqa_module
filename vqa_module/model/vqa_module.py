@@ -17,7 +17,6 @@ class VQAModel(ABC):
                  questions:List[str],
                  expected_answers:List[List[str]],
                  images:List,
-                 batch_size:int,
                  question_weights:List[float]=None,
                  threshold:float=None,
                  idx_to_name:dict=None) -> Dict:
@@ -27,7 +26,6 @@ class VQAModel(ABC):
             questions (List[str]): List of questions to ask an image
             expected_answers (List[List[str]]): List of expected answers for each question.
             images (List): List of images to process
-            batch_size (int): Number of images to process at once
             question_weights (List[float], optional): List of weights for each question. Defaults to None.
             threshold (float, optional): Threshold for accepting images. Defaults to None.
 
@@ -36,7 +34,6 @@ class VQAModel(ABC):
         """
         assert len(questions) == len(expected_answers)
         assert len(questions) == len(question_weights)
-        assert sum(question_weights) == 1.0
         num_questions = len(questions)
         num_images = len(images)
         
@@ -48,34 +45,30 @@ class VQAModel(ABC):
         else:
             question_weights = torch.ones(num_questions, device=self.device)
             threshold = num_questions
-
-        # For each question, loop over a batch of images
+        
+        # Looping through questions
         scores = torch.zeros(num_images, num_questions, requires_grad=False, device=self.device)
         with torch.no_grad():
-            for image_idx in tqdm(range(0, num_images, batch_size)):
-                for question_idx, question in enumerate(questions):
-                    # Determine batch of images to process
-                    start_idx = image_idx
-                    end_idx = image_idx + batch_size if num_images - start_idx >= batch_size else num_images
-                    
-                    # Process batch of images for one particular question
-                    processed_images = self.processor(images[start_idx: end_idx], question, padding=True, return_tensors='pt').to(self.device)
-                    generated_ids = self.model.generate(**processed_images)
-                    generated_answers = self.processor.batch_decode(generated_ids, skip_special_tokens=True)
-                    
-                    # Check generated-expected answers mismatch
-                    assert len(generated_answers) == end_idx - start_idx
-                    answer_match = torch.tensor([1 if answer in expected_answers[question_idx] else 0 for answer in generated_answers])
-                    scores[start_idx: end_idx, question_idx] = answer_match
+            for question_idx, question in enumerate(questions):
+                
+                # Process batch of images for one particular question
+                processed_images = self.processor(images, question, padding=True, return_tensors='pt').to(self.device)
+                generated_ids = self.model.generate(**processed_images)
+                generated_answers = self.processor.batch_decode(generated_ids, skip_special_tokens=True)
+                
+                # Check generated-expected answers mismatch
+                assert len(generated_answers) == num_images
+                answer_match = torch.tensor([1 if answer in expected_answers[question_idx] else 0 for answer in generated_answers])
+                scores[:, question_idx] = answer_match
 
-                    # Clean-up
-                    del processed_images
-                    del generated_ids
-                    del generated_answers
-                    del answer_match
+                # Clean-up
+                del processed_images
+                del generated_ids
+                del generated_answers
+                del answer_match
 
-                    gc.collect()
-                    torch.cuda.empty_cache()
+                gc.collect()
+                torch.cuda.empty_cache()
         
             weighted_scores = torch.sum(scores * question_weights.unsqueeze(0), dim=1)
             accepted_indices = torch.nonzero(weighted_scores >= threshold).squeeze(dim=1).tolist()
