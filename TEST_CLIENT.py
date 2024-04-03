@@ -11,7 +11,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--host', help='Input host')
     parser.add_argument('--port', help='Input port', default=2503)
-    parser.add_argument('--total_images', help='Input total images', default=1000, type=int)
+    parser.add_argument('--total_images', help='Input total images', default=-1, type=int)
     parser.add_argument('--batch_size', help='Input batch size', default=100, type=int)
     parser.add_argument('--question_weights', help='Input question weights', default=None)
     parser.add_argument('--threshold', help='Input threshold', default=None, type=float)
@@ -20,7 +20,10 @@ def main():
     # LOAD IMAGES
     url = f"http://{args.host}:{args.port}/process"
     dir_path = './imgs'
-    all_image_paths = [os.path.join(dir_path, file) for file in sorted(os.listdir(dir_path))][:args.total_images]
+    if args.total_images == -1:
+        all_image_paths = [os.path.join(dir_path, file) for file in sorted(os.listdir(dir_path))]
+    else:
+        all_image_paths = [os.path.join(dir_path, file) for file in sorted(os.listdir(dir_path))][:args.total_images]
 
     # CREATE OUTPUT FOLDER
     os.makedirs('./outputs', exist_ok=True)
