@@ -1,5 +1,5 @@
 import time
-from typing import List, Dict
+from typing import List, Dict, Union
 from fastapi import FastAPI, UploadFile, Depends, Form
 from fastapi.responses import RedirectResponse
 from fastapi.exceptions import HTTPException, RequestValidationError
@@ -18,8 +18,8 @@ class Request(BaseModel):
     images: List[UploadFile] = Form(..., title="Images", description="List of images to process.")
     questions: List[str] = Form(..., title="Questions", description="List of questions to ask.")
     expected_answers: List[str] = Form(..., title="Expected Answers", description="List of expected answers for each question. Possible answers should be separated by a space.")
-    question_weights: str = Form(None, title="Question Weights", description="List of weights for each question. Weights should be separated by a space.")
-    threshold: float = Form(None, title="Threshold", description="Threshold for accepting images.")
+    question_weights: Union[str, None] = Form(None, title="Question Weights", description="List of weights for each question. Weights should be separated by a space.")
+    threshold: Union[float, None] = Form(None, title="Threshold", description="Threshold for accepting images.")
 
 @app.get("/", include_in_schema=False)
 def docs_redirect():
@@ -33,8 +33,8 @@ async def process_images(request: Request = Depends()) -> Dict:
         # Process request data
         questions = process_concatenated_questions(request.questions) if request.questions[0].count('?') > 1 else request.questions
         expected_answers = process_concatenated_expected_answers(request.expected_answers) if ',' in request.expected_answers[0] else [x.split() for x in request.expected_answers]
-        question_weights = [float(x) for x in request.question_weights.split()]
-        threshold = request.threshold
+        question_weights = [float(x) for x in request.question_weights.split()] if request.question_weights else None
+        threshold = request.threshold if request.threshold else None
 
         # Preprocess images
         logger.info("Processing images...")

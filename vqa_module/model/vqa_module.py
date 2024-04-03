@@ -33,7 +33,8 @@ class VQAModel(ABC):
             dict: Dictionary containing the indices of accepted images, their answers' correctness and their corresponding scores.
         """
         assert len(questions) == len(expected_answers)
-        assert len(questions) == len(question_weights)
+        if question_weights:
+            assert len(questions) == len(question_weights)
         num_questions = len(questions)
         num_images = len(images)
         
