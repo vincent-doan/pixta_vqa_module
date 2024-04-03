@@ -59,7 +59,7 @@ async def process_images(request: Request = Depends()) -> Dict:
         logger.info("Data processed by VQA engine.")
         time_taken = time.time() - start
         output['time_taken'] = round(time_taken, 2)
-        logger.info(f"Time taken: {time_taken} seconds.")
+        logger.info(f"Time taken: {round(time_taken, 2)} seconds.")
         return output
 
     except RequestValidationError as e:
