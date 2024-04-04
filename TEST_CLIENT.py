@@ -13,8 +13,7 @@ def main():
     parser.add_argument('--port', help='Input port', default=2503)
     parser.add_argument('--total_images', help='Input total images', default=-1, type=int)
     parser.add_argument('--batch_size', help='Input batch size', default=100, type=int)
-    parser.add_argument('--question_weights', help='Input question weights', default=None)
-    parser.add_argument('--threshold', help='Input threshold', default=None, type=float)
+    parser.add_argument('--query_details', help='Input path to query details', default='./query_details.json')
     args = parser.parse_args()
 
     # LOAD IMAGES
@@ -32,22 +31,10 @@ def main():
     os.makedirs(f"{output_folder}/responses")
 
     # DEFINE PARAMS AND DATA
-    params = {
-        'question_weights': args.question_weights,
-        'threshold': args.threshold
-    }
-    data = {
-        'questions': [
-            'Using yes or no, are there people in this image?',
-            'Using yes or no, is this image in a studio, with a plain color background?',
-            'Using yes or no, is this image an illustration?',
-            'Using yes or no, are there people of races other than Asian and Caucasian in this image?',
-            'Using yes or no, are there anyone above the age of 50 in this image?',
-            'Using yes or no, are there both men and women in the image?',
-            'Using yes or no, does the image exude a stressful atmosphere?',
-        ],
-        'expected_answers': ['yes', 'no', 'no', 'no', 'no', 'yes', 'yes'],
-    }
+    with open(args.query_details, 'r') as f:
+        query_details = json.load(f)
+    params = query_details['params']
+    data = query_details['data']
 
     with open(f"{output_folder}/params.json", "w") as f:
         json.dump(params, f, indent=4)

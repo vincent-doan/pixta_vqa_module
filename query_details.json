@@ -1,0 +1,22 @@
+{
+    "params": {
+        "question_weights": null,
+        "threshold": null
+    },
+    "data": {
+        "questions": [
+            "Using yes or no, are there people in this image?",
+            "Using yes or no, does the image contain human faces?",
+            "Using yes or no, is this image in a studio, with a plain color background?",
+            "Using yes or no, is this image an illustration?",
+            "Using yes or no, are there black people in this image?",
+            "Using yes or no, are there Hispanic people in this image?",
+            "Using yes or no, are there Latin people in this image?",
+            "Using yes or no, are there anyone above the age of 50 in this image?",
+            "Using yes or no, are there both men and women in the image?",
+            "Using yes or no, is there anyone looking happy in the image?",
+            "Using yes or no, is there anyone looking stressed in the image?"
+        ],
+        "expected_answers": ["yes", "yes", "no", "no", "no", "no", "no", "no", "yes", "no", "yes"]
+    }
+}
