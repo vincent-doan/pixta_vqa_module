@@ -50,7 +50,7 @@ class VQAModel(ABC):
         # Looping through questions
         scores = torch.zeros(num_images, num_questions, requires_grad=False, device=self.device)
         with torch.no_grad():
-            for question_idx, question in enumerate(questions):
+            for question_idx, question in tqdm(enumerate(questions), total=num_questions):
                 
                 # Process batch of images for one particular question
                 processed_images = self.processor(images, question, padding=True, return_tensors='pt').to(self.device)
