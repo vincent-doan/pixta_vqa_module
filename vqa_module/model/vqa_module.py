@@ -76,15 +76,18 @@ class VQAModel(ABC):
 
         # Format output
         output = {}
-        output['accepted_images'] = [idx_to_name[idx] for idx in accepted_indices] if idx_to_name else accepted_indices
+        output['accepted_images'] = []
         for idx in range(num_images):
             key = idx_to_name[idx] if idx_to_name else idx
+            results = list(map(int, scores[idx].tolist()))
+            score = round(weighted_scores[idx].item(), 2)
             output[key] = {
-                'results': list(map(int, scores[idx].tolist())),
-                'score': round(weighted_scores[idx].item(), 2)
+                'results': results,
+                'score': score
             }
             if idx in accepted_indices:
                 output[key]['accepted'] = True
+                output['accepted_images'].append({'image_id': key, 'score': score, 'results': results})
             else:
                 output[key]['accepted'] = False
         return output
