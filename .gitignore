@@ -4,3 +4,5 @@ samples/
 **/__pycache__/
 imgs/
 outputs/
+VISUALIZE_IMAGES.ipynb
+annotation_final.json
