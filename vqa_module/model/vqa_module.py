@@ -48,19 +48,32 @@ class VQAModel(ABC):
             threshold = num_questions
         
         # Looping through questions
+        raw_scores = torch.zeros(num_images, num_questions, requires_grad=False, device=self.device)
         scores = torch.zeros(num_images, num_questions, requires_grad=False, device=self.device)
         with torch.no_grad():
             for question_idx, question in tqdm(enumerate(questions), total=num_questions):
                 
                 # Process batch of images for one particular question
                 processed_images = self.processor(images, question, padding=True, return_tensors='pt').to(self.device)
-                generated_ids = self.model.generate(**processed_images)
-                generated_answers = self.processor.batch_decode(generated_ids, skip_special_tokens=True)
+                generated_ids = self.model.generate(**processed_images, output_scores=True, return_dict_in_generate=True)
+                answer_scores = generated_ids.scores
+
+                # Calculate confidence
+                topks = [s.softmax(-1).topk(1) for s in answer_scores] 
+                for i, tk in enumerate(topks):
+                    if i == 0:
+                        probs = tk.values.view(-1).unsqueeze(0)
+                    else:
+                        probs = torch.concat([probs, tk.values.view(-1).unsqueeze(0)], dim=0)
+                answer_confidences = probs.prod(dim=0).to(self.device)
+
+                generated_answers = self.processor.batch_decode(generated_ids['sequences'], skip_special_tokens=True)
                 
-                # Check generated-expected answers mismatch
+                # Check generated-expected answers mismatch 
                 assert len(generated_answers) == num_images
-                answer_match = torch.tensor([1 if answer in expected_answers[question_idx] else 0 for answer in generated_answers])
-                scores[:, question_idx] = answer_match
+                answer_match = torch.tensor([1 if answer in expected_answers[question_idx] else 0 for answer in generated_answers], device=self.device)
+                raw_scores[:, question_idx] = answer_match
+                scores[:, question_idx] = answer_match * answer_confidences
 
                 # Clean-up
                 del processed_images
@@ -79,7 +92,7 @@ class VQAModel(ABC):
         output['accepted_images'] = []
         for idx in range(num_images):
             key = idx_to_name[idx] if idx_to_name else idx
-            results = list(map(int, scores[idx].tolist()))
+            results = list(map(int, raw_scores[idx].tolist()))
             score = round(weighted_scores[idx].item(), 2)
             output[key] = {
                 'results': results,
