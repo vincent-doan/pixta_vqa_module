@@ -11,5 +11,9 @@ git clone https://github.com/vincent-doan/pixta_vqa_module.git
 3. Modify questions, question weights, expected answers, and threshold in ``query_details.json``
 
 ```
-python2 TEST_CLIENT.py --host ip_addr --port port_num --batch_size 100 --total_images 200 --query_details ./query_details.json
+./run_service.sh
+```
+
+```
+python3 TEST_CLIENT.py --host ip_addr --port port_num --batch_size 100 --total_images 200 --query_details ./query_details.json
 ```
