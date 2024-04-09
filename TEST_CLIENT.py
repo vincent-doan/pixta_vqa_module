@@ -5,6 +5,8 @@ import json
 from datetime import datetime
 from tqdm import tqdm
 
+from metrics import calculate_metrics
+
 def main():
 
     # COMMAND LINE ARGUMENTS
@@ -13,7 +15,8 @@ def main():
     parser.add_argument('--port', help='Input port', default=2503)
     parser.add_argument('--total_images', help='Input total images', default=-1, type=int)
     parser.add_argument('--batch_size', help='Input batch size', default=100, type=int)
-    parser.add_argument('--query_details', help='Input path to query details', default='./query_details.json')
+    parser.add_argument('--query_details', help='Input path to query details', default='./query_details_req1.json')
+    parser.add_argument('--true_labels', help='Input path to true labels', default='./labels/labels_for_req1.json')
     args = parser.parse_args()
 
     # LOAD IMAGES
@@ -62,13 +65,21 @@ def main():
         with open(f"{output_folder}/responses/response_{i // args.batch_size}.json", 'a') as json_file:
             json.dump(response.json(), json_file, indent=4)
             json_file.write('\n')
+    
+    # SAVE METRICS
+    accepted_image_ids = [image["image_id"].split('.')[0] for image in accepted_images]
+    accuracy, precision, recall, f1 = calculate_metrics(accepted_image_ids, args.true_labels)
 
     # SAVE OVERALL STATISTICS
     with open(f"{output_folder}/stats_overall.json", "w") as f:
         json.dump({
             'process_time_taken': round(process_time_taken, 2),
             'total_time_taken': round(total_time_taken, 2),
-            'accepted_images': accepted_images
+            'accepted_images': accepted_images,
+            'accuracy': accuracy,
+            'precision': precision,
+            'recall': recall,
+            'f1': f1
         }, f, indent=4)
 
 if __name__ == '__main__':
