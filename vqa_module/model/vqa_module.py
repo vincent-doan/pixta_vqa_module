@@ -19,7 +19,8 @@ class VQAModel(ABC):
                  images:List,
                  question_weights:List[float]=None,
                  threshold:float=None,
-                 idx_to_name:dict=None) -> Dict:
+                 idx_to_name:dict=None,
+                 use_confidence:bool=True) -> Dict:
         """_Process images in batches and generate answers for each question._
 
         Args:
@@ -59,27 +60,29 @@ class VQAModel(ABC):
                 answer_scores = generated_ids.scores
 
                 # Calculate confidence
-                topks = [s.softmax(-1).topk(1) for s in answer_scores] 
-                for i, tk in enumerate(topks):
-                    if i == 0:
-                        probs = tk.values.view(-1).unsqueeze(0)
-                    else:
-                        probs = torch.concat([probs, tk.values.view(-1).unsqueeze(0)], dim=0)
-                answer_confidences = probs.prod(dim=0).to(self.device)
+                if use_confidence:
+                    topks = [s.softmax(-1).topk(1) for s in answer_scores] 
+                    for i, tk in enumerate(topks):
+                        if i == 0:
+                            probs = tk.values.view(-1).unsqueeze(0)
+                        else:
+                            probs = torch.concat([probs, tk.values.view(-1).unsqueeze(0)], dim=0)
+                    answer_confidences = probs.prod(dim=0).to(self.device)
 
                 generated_answers = self.processor.batch_decode(generated_ids['sequences'], skip_special_tokens=True)
                 
                 # Check generated-expected answers mismatch 
                 assert len(generated_answers) == num_images
-                answer_match = torch.tensor([1 if answer in expected_answers[question_idx] else 0 for answer in generated_answers], device=self.device)
+                answer_match = torch.tensor([1 if answer in expected_answers[question_idx] else -0.1 for answer in generated_answers], device=self.device)
                 raw_scores[:, question_idx] = answer_match
-                scores[:, question_idx] = answer_match * answer_confidences
+                scores[:, question_idx] = answer_match * answer_confidences if use_confidence else answer_match
 
                 # Clean-up
                 del processed_images
                 del generated_ids
                 del generated_answers
                 del answer_match
+                del answer_confidences
 
                 gc.collect()
                 torch.cuda.empty_cache()

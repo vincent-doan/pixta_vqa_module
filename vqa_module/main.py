@@ -18,6 +18,7 @@ class Request(BaseModel):
     images: List[UploadFile] = Form(..., title="Images", description="List of images to process.")
     questions: List[str] = Form(..., title="Questions", description="List of questions to ask.")
     expected_answers: List[str] = Form(..., title="Expected Answers", description="List of expected answers for each question. Possible answers should be separated by a space.")
+    use_confidence: bool = Form(..., title="Use Confidence", description="Whether to use confidence scores for answers.")
     question_weights: Union[str, None] = Form(None, title="Question Weights", description="List of weights for each question. Weights should be separated by a space.")
     threshold: Union[float, None] = Form(None, title="Threshold", description="Threshold for accepting images.")
 
@@ -35,6 +36,7 @@ async def process_images(request: Request = Depends()) -> Dict:
         expected_answers = process_concatenated_expected_answers(request.expected_answers) if ',' in request.expected_answers[0] else [x.split() for x in request.expected_answers]
         question_weights = [float(x) for x in request.question_weights.split()] if request.question_weights else None
         threshold = request.threshold if request.threshold else None
+        use_confidence = request.use_confidence
 
         # Preprocess images
         logger.info("Processing images...")
@@ -54,7 +56,8 @@ async def process_images(request: Request = Depends()) -> Dict:
             expected_answers=expected_answers,
             question_weights=question_weights,
             threshold=threshold,
-            idx_to_name=idx_to_name
+            idx_to_name=idx_to_name,
+            use_confidence=use_confidence
         )
         logger.info("Data processed by VQA engine.")
         time_taken = time.time() - start
