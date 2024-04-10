@@ -12,7 +12,7 @@ def calculate_metrics(pos_predictions:list, true_labels_path:str, total:int=None
     """
     with open(true_labels_path, 'r') as f:
         true_labels = json.load(f)
-    if range:
+    if total:
         sorted_items = sorted(true_labels.items())
         subset = sorted_items[:total]
         true_labels = dict(subset)
