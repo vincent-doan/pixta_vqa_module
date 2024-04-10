@@ -82,7 +82,8 @@ class VQAModel(ABC):
                 del generated_ids
                 del generated_answers
                 del answer_match
-                del answer_confidences
+                if use_confidence:
+                    del answer_confidences
 
                 gc.collect()
                 torch.cuda.empty_cache()
