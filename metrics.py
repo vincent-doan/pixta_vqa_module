@@ -27,4 +27,6 @@ def calculate_metrics(pos_predictions:list, true_labels_path:str, total:int=None
     recall = TP / (TP + FN) if TP + FN != 0 else 0
     f1_score = 2 * precision * recall / (precision + recall) if precision + recall != 0 else 0
     
-    return round(accuracy, 2), round(precision, 2), round(recall, 2), round(f1_score, 2)
+    true_positive_image_ids = [id for id in true_labels if true_labels[id] == 1]
+
+    return round(accuracy, 2), round(precision, 2), round(recall, 2), round(f1_score, 2), true_positive_image_ids
