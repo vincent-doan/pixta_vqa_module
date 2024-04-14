@@ -17,11 +17,12 @@ def main():
     parser.add_argument('--batch_size', help='Input batch size', default=100, type=int)
     parser.add_argument('--query_details', help='Input path to query details', default='./query_details_req1.json')
     parser.add_argument('--true_labels', help='Input path to true labels', default='./labels/labels_for_req1.json')
+    parser.add_argument('--image_folder', help='Input path to image folder', default='./final_data_10k')
     args = parser.parse_args()
 
     # LOAD IMAGES
     url = f"http://{args.host}:{args.port}/process"
-    dir_path = './final_data_10k'
+    dir_path = args.image_folder
     if args.total_images == -1:
         all_image_paths = [os.path.join(dir_path, file) for file in sorted(os.listdir(dir_path))]
     else:
