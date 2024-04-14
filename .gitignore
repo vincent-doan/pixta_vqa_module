@@ -2,10 +2,11 @@
 app.log
 samples/
 **/__pycache__/
-imgs/
+final_data_10k_wm/
 final_data_10k/
 outputs/
 VISUALIZE_IMAGES.ipynb
 annotation_final.json
 query_details_req1.json
 query_details_req2.json
+query_details_req3.json
