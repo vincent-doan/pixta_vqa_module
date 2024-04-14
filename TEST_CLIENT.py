@@ -21,7 +21,7 @@ def main():
 
     # LOAD IMAGES
     url = f"http://{args.host}:{args.port}/process"
-    dir_path = './imgs'
+    dir_path = './final_data_10k'
     if args.total_images == -1:
         all_image_paths = [os.path.join(dir_path, file) for file in sorted(os.listdir(dir_path))]
     else:
@@ -68,7 +68,7 @@ def main():
     
     # SAVE METRICS
     accepted_image_ids = [image["image_id"].split('.')[0] for image in accepted_images]
-    accuracy, precision, recall, f1 = calculate_metrics(accepted_image_ids, args.true_labels)
+    accuracy, precision, recall, f1, true_positive_image_ids = calculate_metrics(accepted_image_ids, args.true_labels, total=args.total_images)
 
     # SAVE OVERALL STATISTICS
     with open(f"{output_folder}/stats_overall.json", "w") as f:
@@ -76,10 +76,12 @@ def main():
             'process_time_taken': round(process_time_taken, 2),
             'total_time_taken': round(total_time_taken, 2),
             'accepted_images': accepted_images,
+            'accepted_image_ids': sorted(accepted_image_ids),
+            'true_positive_image_ids': sorted(true_positive_image_ids),
             'accuracy': accuracy,
             'precision': precision,
             'recall': recall,
-            'f1': f1
+            'f1': f1,
         }, f, indent=4)
 
 if __name__ == '__main__':
