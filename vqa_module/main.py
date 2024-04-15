@@ -12,9 +12,9 @@ from .utils import preprocess_image, process_concatenated_questions, process_con
 logger.add("app.log", rotation="500 MB", level="DEBUG")
 open("app.log", "w").close()
 app = FastAPI()
-engine = VQAEngine(model_name='blip-vqa-capfilt-large', device='cuda')
 
 class Request(BaseModel):
+    model_name: str = Form(..., title="Model Name", description="Name of the model to use for processing.")
     images: List[UploadFile] = Form(..., title="Images", description="List of images to process.")
     questions: List[str] = Form(..., title="Questions", description="List of questions to ask.")
     expected_answers: List[str] = Form(..., title="Expected Answers", description="List of expected answers for each question. Possible answers should be separated by a space.")
@@ -50,6 +50,7 @@ async def process_images(request: Request = Depends()) -> Dict:
 
         # Send data to VQA engine for processing
         logger.info("Sending data to VQA engine for processing...")
+        engine = VQAEngine(model_name=request.model_name, device='cuda')
         output = engine(
             questions=questions,
             images=processed_images,
