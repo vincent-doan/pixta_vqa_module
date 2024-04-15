@@ -5,13 +5,31 @@ import torch, gc
 from abc import ABC
 from tqdm import tqdm
 from typing import List, Dict
-from transformers import BlipProcessor, BlipForQuestionAnswering
+from transformers import BlipProcessor, BlipForQuestionAnswering, Blip2Config, Blip2ForConditionalGeneration, Blip2Processor
+
+from accelerate import init_empty_weights, infer_auto_device_map
+from accelerate.utils import get_balanced_memory
+
+def check_answer(answer:str, expected_answers:list):
+    if answer in expected_answers:
+        return True
+    for expected_answer in expected_answers:
+        if expected_answer in answer:
+            return True
+    return False
 
 class VQAModel(ABC):
     def __init__(self, device:str):
         self.device = device
         self.model = None
         self.processor = None
+        self.generation_config = {
+            "max_length": 50,
+            "num_beams": 1,
+            "early_stopping": True,
+            "output_scores": True,
+            "return_dict_in_generate": True
+        }
 
     def __call__(self,
                  questions:List[str],
@@ -55,8 +73,8 @@ class VQAModel(ABC):
             for question_idx, question in tqdm(enumerate(questions), total=num_questions):
                 
                 # Process batch of images for one particular question
-                processed_images = self.processor(images, question, padding=True, return_tensors='pt').to(self.device)
-                generated_ids = self.model.generate(**processed_images, output_scores=True, return_dict_in_generate=True)
+                processed_images = self.processor(images, [question]*num_images, padding=True, return_tensors='pt').to(self.device)
+                generated_ids = self.model.generate(**processed_images, **self.generation_config)
                 answer_scores = generated_ids.scores
 
                 # Calculate confidence
@@ -69,11 +87,13 @@ class VQAModel(ABC):
                             probs = torch.concat([probs, tk.values.view(-1).unsqueeze(0)], dim=0)
                     answer_confidences = probs.prod(dim=0).to(self.device)
 
-                generated_answers = self.processor.batch_decode(generated_ids['sequences'], skip_special_tokens=True)
+                generated_answers = self.processor.batch_decode(generated_ids.sequences, skip_special_tokens=True)
+                generated_answers = list(map(lambda x: x.strip(), generated_answers))
                 
                 # Check generated-expected answers mismatch 
                 assert len(generated_answers) == num_images
-                answer_match = torch.tensor([1 if answer in expected_answers[question_idx] else -0.1 for answer in generated_answers], device=self.device)
+                
+                answer_match = torch.tensor([1 if check_answer(answer, expected_answers[question_idx]) else -0.1 for answer in generated_answers], device=self.device)
                 raw_scores[:, question_idx] = answer_match
                 scores[:, question_idx] = answer_match * answer_confidences if use_confidence else answer_match
 
@@ -112,13 +132,40 @@ class VQAModel(ABC):
 class BLIPCapliftLarge(VQAModel):
     def __init__(self, device:str):
         super().__init__(device=device)
-        self.model = BlipForQuestionAnswering.from_pretrained("Salesforce/blip-vqa-capfilt-large").to(self.device).eval()
-        self.processor = BlipProcessor.from_pretrained("Salesforce/blip-vqa-capfilt-large")
+        self.model_id = "Salesforce/blip-vqa-capfilt-large"
+        self.model = BlipForQuestionAnswering.from_pretrained(self.model_id).to(self.device).eval()
+        self.processor = BlipProcessor.from_pretrained(self.model_id)
+
+class BLIP2Opt67bCoco(VQAModel):
+    def __init__(self, device:str):
+        super().__init__(device=device)
+        self.model_id = "Salesforce/blip2-opt-6.7b-coco"
+        config = Blip2Config.from_pretrained(self.model_id)
+        self.processor = Blip2Processor.from_pretrained(self.model_id)
+        
+        with init_empty_weights(self.model_id) as state_dict:
+            model = Blip2ForConditionalGeneration(config)
+            max_memory = get_balanced_memory(
+                model, 
+                max_memory=None, 
+                no_split_module_classes=["OPTDecoderLayer", "Attention", "MLP", "LayerNorm", "Linear"], 
+                dtype=torch.float32, 
+                low_zero=False)
+            device_map = infer_auto_device_map(
+                model, 
+                no_split_module_classes=["OPTDecoderLayer", "Attention", "MLP", "LayerNorm", "Linear"], 
+                dtype=torch.float32, 
+                max_memory=max_memory)
+
+        device_map['language_model.lm_head'] = device_map['language_model.model.decoder.embed_tokens']
+        self.model = Blip2ForConditionalGeneration.from_pretrained(self.model_id, device_map=device_map, torch_dtype=torch.float32).eval()
 
 class VQAEngine:
     def __init__(self, model_name:str, device:str) -> None:
         if model_name == 'blip-vqa-capfilt-large':
             self.model = BLIPCapliftLarge(device=device)
+        elif model_name == 'blip2-opt-6.7b-coco':
+            self.model = BLIP2Opt67bCoco(device=device)
         else:
             raise ValueError(f"Model {model_name} not supported.")
     
