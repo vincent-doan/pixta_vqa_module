@@ -17,7 +17,8 @@ def main():
     parser.add_argument('--batch_size', help='Input batch size', default=100, type=int)
     parser.add_argument('--query_details', help='Input path to query details', default='./query_details_req1.json')
     parser.add_argument('--true_labels', help='Input path to true labels', default='./labels/labels_for_req1.json')
-    parser.add_argument('--image_folder', help='Input path to image folder', default='./final_data_10k')
+    parser.add_argument('--image_folder', help='Input path to image folder', default='/mnt/md0/projects/image_search/final_data_10k')
+    parser.add_argument('--model_name', help='Input model name', default='blip-vqa-capfilt-large')
     args = parser.parse_args()
 
     # LOAD IMAGES
@@ -38,6 +39,7 @@ def main():
     with open(args.query_details, 'r') as f:
         query_details = json.load(f)
     params = query_details['params']
+    params['model_name'] = args.model_name
     data = query_details['data']
 
     with open(f"{output_folder}/params.json", "w") as f:
