@@ -17,17 +17,26 @@ def main():
     parser.add_argument('--batch_size', help='Input batch size', default=100, type=int)
     parser.add_argument('--query_details', help='Input path to query details', default='./query_details_req1.json')
     parser.add_argument('--true_labels', help='Input path to true labels', default='./labels/labels_for_req1.json')
-    parser.add_argument('--image_folder', help='Input path to image folder', default='/mnt/md0/projects/image_search/final_data_10k')
+    parser.add_argument('--image_folder', help='Input path to image folder', default='./final_data_10k')
     parser.add_argument('--model_name', help='Input model name', default='blip-vqa-capfilt-large')
+    parser.add_argument('--input_image_ids', help='Input path to input image ids', default='./input_image_ids.json')
     args = parser.parse_args()
 
     # LOAD IMAGES
     url = f"http://{args.host}:{args.port}/process"
     dir_path = args.image_folder
-    if args.total_images == -1:
-        all_image_paths = [os.path.join(dir_path, file) for file in sorted(os.listdir(dir_path))]
+    if args.input_image_ids != "None": 
+        with open(args.input_image_ids, 'r') as f:
+            input_image_ids = json.load(f)
+        if args.total_images == -1: # Filter images based on input_image_ids
+            all_image_paths = [os.path.join(dir_path, file) for file in sorted(os.listdir(dir_path)) if file.split('.')[0] in input_image_ids]
+        else: # Filter images based on input_image_ids and total_images
+            all_image_paths = [os.path.join(dir_path, file) for file in sorted(os.listdir(dir_path)) if file.split('.')[0] in input_image_ids][:args.total_images]
     else:
-        all_image_paths = [os.path.join(dir_path, file) for file in sorted(os.listdir(dir_path))][:args.total_images]
+        if args.total_images == -1: # Use all images
+            all_image_paths = [os.path.join(dir_path, file) for file in sorted(os.listdir(dir_path))]
+        else: # Use all images up to total_images
+            all_image_paths = [os.path.join(dir_path, file) for file in sorted(os.listdir(dir_path))][:args.total_images]
 
     # CREATE OUTPUT FOLDER
     os.makedirs('./outputs', exist_ok=True)
