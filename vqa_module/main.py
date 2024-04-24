@@ -60,7 +60,7 @@ async def process_images(request: Request = Depends()) -> Dict:
             idx_to_name=idx_to_name,
             use_confidence=use_confidence
         )
-        logger.info("Data processed by VQA engine.")
+        logger.info(f"Data processed by VQA engine. Out of {len(processed_images)} images, {len(output['accepted_images'])} images were accepted.")
         time_taken = time.time() - start
         output['time_taken'] = round(time_taken, 2)
         logger.info(f"Time taken: {round(time_taken, 2)} seconds.")
